@@ -17,7 +17,7 @@ type LineOfData struct {
 	Device
 }
 
-//Device ...
+// Device ...
 type Device struct {
 	// From MT
 	// NotNeeded
@@ -56,19 +56,19 @@ type Device struct {
 	IP  string `json:"ip"`
 	Mac string `json:"mac"`
 
-	Manual          bool
-	Blocked         bool
-	Disabled        bool
-	ShouldBeBlocked bool
-	TypeD           string
-	TimeoutBlock    string
-	HourlyQuota     uint64
-	DailyQuota      uint64
-	MonthlyQuota    uint64
-	Timeout         time.Time
+	// Manual          bool
+	// Blocked         bool
+	// Disabled        bool
+	// ShouldBeBlocked bool
+	// TypeD           string
+	// TimeoutBlock    string
+	// HourlyQuota     uint64
+	// DailyQuota      uint64
+	// MonthlyQuota    uint64
+	Timeout time.Time
 	//UserType
-	Name     string
-	Position string
-	Company  string
-	IDUser   string
+	// 	Name     string
+	// 	Position string
+	// 	Company  string
+	// 	IDUser   string
 }
