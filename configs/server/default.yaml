@@ -1,0 +1,16 @@
+sub_nets:
+  - '192.168.0.0/24'
+  - '192.168.13.0/24'
+  - '192.168.65.0/24'
+  - '10.61.152.0/24'
+ignor_list:
+  - '10.61.152.2'
+  - '10.50.4.62:53'
+  - 'ff02::'
+flow_port: '2055'
+log_level: debug
+name_file_to_log: ./logs/access.log
+config_path: ./config
+pidfile: ./gosquid.pid
+csv: true
+receive_buffer_size_bytes: 212992
