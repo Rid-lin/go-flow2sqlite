@@ -1,22 +1,23 @@
 package sqlitestore
 
 import (
+	"database/sql"
 	"io/fs"
 	"os"
 	"path"
 	"sort"
 
-	"github.com/Rid-lin/go-sqlite-lite/sqlite3"
-
 	"fmt"
 	"strings"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestDB(t *testing.T, dsn string) (string, func(...string)) {
 	t.Helper()
 
-	conn, err := sqlite3.Open(dsn)
+	conn, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		fmt.Println(err)
 		t.Fatal(err)
@@ -31,7 +32,8 @@ func TestDB(t *testing.T, dsn string) (string, func(...string)) {
 	return dsn, func(tables ...string) {
 		if len(tables) > 0 {
 			for _, table := range tables {
-				if err := conn.Exec(fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+				_, err := conn.Exec(fmt.Sprintf("DELETE FROM %s", table))
+				if err != nil {
 					fmt.Println(err)
 					t.Fatal(err)
 				}
@@ -41,7 +43,7 @@ func TestDB(t *testing.T, dsn string) (string, func(...string)) {
 	}
 }
 
-func MigrateSQLite(pathToMigrations string, conn *sqlite3.Conn) error {
+func MigrateSQLite(pathToMigrations string, db *sql.DB) error {
 
 	files, err := os.ReadDir(pathToMigrations)
 	if err != nil {
@@ -54,7 +56,7 @@ func MigrateSQLite(pathToMigrations string, conn *sqlite3.Conn) error {
 			if err != nil {
 				return err
 			}
-			err = conn.Exec(string(b))
+			_, err = db.Exec(string(b))
 			if err != nil {
 				return err
 			}

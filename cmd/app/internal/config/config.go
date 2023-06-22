@@ -1,6 +1,7 @@
 package config
 
 import (
+	"go-flow2sqlite/cmd/app/internal/services/updater"
 	"os"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 )
 
 type Config struct {
+	Loc                    string   `default:"UTC" usage:"Location for time"`
 	SubNets                []string `default:"" usage:"List of subnets traffic between which will not be counted"`
 	IgnorList              []string `default:"" usage:"List of lines that will be excluded from the final log"`
 	BindAddr               string   `default:"0.0.0.0:30340" usage:"Listen address for HTTP-server"`
@@ -74,4 +76,10 @@ func NewConfig() *Config {
 	logrus.Debugf("Config %#v:", cfg)
 
 	return &cfg
+}
+
+func (cfg *Config) ToOptions() *updater.Options {
+	return &updater.Options{
+		Address: cfg.GomtcAddr,
+	}
 }

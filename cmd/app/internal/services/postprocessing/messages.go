@@ -5,24 +5,11 @@ import (
 	"fmt"
 	"go-flow2sqlite/cmd/app/internal/models"
 	decodeflow "go-flow2sqlite/cmd/app/internal/services/udp"
-	"go-flow2sqlite/vendor/github.com/sirupsen/logrus"
+
+	"github.com/sirupsen/logrus"
 )
 
-type BMes struct {
-	Time       uint32 // time
-	Delay      uint32 //delay
-	IPSrc      string //src ip - Local
-	Protocol   string // protocol
-	SizeOfByte uint32 // size
-	IPDst      string // dst ip - Inet
-	PortDst    uint16 // dstport
-	MacDst     string // dstmac
-	RouterIP   string // routerIP
-	PortSRC    uint16 // src port
-
-}
-
-func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, ds *models.Devices) (string, BMes) {
+func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, ds *models.Devices) (string, models.BMes) {
 	binRecord := record.BinaryRecord
 	header := record.Header
 	remoteAddr := record.Host
@@ -34,7 +21,7 @@ func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, d
 	// dstmac = dstmac[2:8]
 
 	var protocol, message string
-	binaryMassege := BMes{}
+	binaryMassege := models.BMes{}
 
 	switch fmt.Sprintf("%v", binRecord.Protocol) {
 	case "6":
@@ -54,7 +41,7 @@ func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, d
 	if ok && !ok2 {
 		ipDst := intToIPv4Addr(binRecord.Ipv4DstAddrInt).String()
 		if inIgnor(ipDst, IgnorList) {
-			return "", BMes{}
+			return "", models.BMes{}
 		}
 		response := GetInfo(ds, ipDst, fmt.Sprint(header.UnixSec))
 		message = fmt.Sprintf("%v.000 %6v %v %v/- %v HEAD %v:%v %v FIRSTUP_PARENT/%v packet_netflow/:%v %v %v",
@@ -72,7 +59,7 @@ func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, d
 			response.HostName,
 			response.Comments,
 		)
-		binaryMassege = BMes{
+		binaryMassege = models.BMes{
 			Time:       header.UnixSec,
 			Delay:      binRecord.LastInt - binRecord.FirstInt,
 			IPDst:      ipDst,
@@ -88,7 +75,7 @@ func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, d
 	} else if !ok && ok2 {
 		ipDst := intToIPv4Addr(binRecord.Ipv4SrcAddrInt).String()
 		if inIgnor(ipDst, IgnorList) {
-			return "", BMes{}
+			return "", models.BMes{}
 		}
 		response := GetInfo(ds, ipDst, fmt.Sprint(header.UnixSec))
 		message = fmt.Sprintf("%v.000 %6v %v %v/- %v HEAD %v:%v %v FIRSTUP_PARENT/%v packet_netflow_inverse/:%v %v %v",
@@ -106,7 +93,7 @@ func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, d
 			response.HostName,
 			response.Comments,
 		)
-		binaryMassege = BMes{
+		binaryMassege = models.BMes{
 			Time:       header.UnixSec,
 			Delay:      binRecord.LastInt - binRecord.FirstInt,
 			IPDst:      ipDst,
@@ -123,7 +110,7 @@ func PPToString(record *decodeflow.DecodedRecord, SubNets, IgnorList []string, d
 	return message, binaryMassege
 }
 
-func PreparingForStore(inChan chan BMes, outChan chan decodeflow.DecodedRecord, subNets, ignorList []string, ds *models.Devices) {
+func PreparingForStore(inChan chan models.BMes, outChan chan decodeflow.DecodedRecord, subNets, ignorList []string, ds *models.Devices) {
 	for record := range outChan {
 		logrus.Tracef("Get from outputChannel:%v", record)
 		message, bm := PPToString(&record, subNets, ignorList, ds)

@@ -1,14 +1,15 @@
 package main
 
 import (
-	"database/sql"
 	"go-flow2sqlite/cmd/app/internal/config"
 	"go-flow2sqlite/cmd/app/internal/models"
-	serverHTTP "go-flow2sqlite/cmd/app/internal/servers/http"
-	"go-flow2sqlite/cmd/app/internal/services/postprocessing"
+	"go-flow2sqlite/cmd/app/internal/services/updater"
+	updatergomtc "go-flow2sqlite/cmd/app/internal/services/updater/gomtc"
+	"go-flow2sqlite/cmd/app/internal/store"
+	sqlitestore "go-flow2sqlite/cmd/app/internal/store/sqlite"
+	"log"
 	"net"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -22,58 +23,41 @@ func GetSIGHUP(vr ...interface{}) func(vr ...interface{}) {
 	}
 }
 
-func (s *Store) writeMessageToStore(inputChannel chan postprocessing.BMes) {
-	for bm := range inputChannel {
-		s.SaveLineOfLog(bm)
-		// ctx := context.Background()
-		// s.DB.ExecContext(ctx, "INSERT INTO raw_log VALUES(?,?,?,?,?,?,?,?,?,?)",
-		// 	bm.Time,
-		// 	bm.Delay,
-		// 	bm.IPSrc,
-		// 	bm.Protocol,
-		// 	bm.SizeOfByte,
-		// 	bm.IPDst,
-		// 	bm.PortDst,
-		// 	bm.MacDst,
-		// 	bm.RouterIP,
-		// 	bm.PortSRC,
-		// )
-
-	}
-
-}
-
 type Transport struct {
-	DB                *sql.DB
-	ds                *models.Devices
-	s                 *serverHTTP.Server
-	Location          *time.Location
-	fileDestination   *os.File
-	conn              *net.UDPConn
-	timerUpdatedevice *time.Timer
-	renewOneMac       chan string
-	exitChan          chan os.Signal
-	Interval          string
-	GomtcAddr         string
-	sync.RWMutex
+	// s                 *serverHTTP.Server
+	// renewOneMac       chan string
+	ds        *models.Devices
+	updater   updater.Store
+	store     store.Store
+	Location  *time.Location
+	conn      *net.UDPConn
+	Interval  string
+	GomtcAddr string
 }
 
 func NewApp(cfg *config.Config) *Transport {
-	var err error
-
-	Location := time.UTC
-	db, err := sql.Open("sqlite", cfg.PathToBD)
+	db, err := sqlitestore.NewDB(cfg.PathToBD)
 	if err != nil {
-		os.Exit(2)
+		log.Println("Error open DB: ", err)
+		os.Exit(1)
 	}
-
 	t := &Transport{
-		DB:          db,
-		renewOneMac: make(chan string, 100),
-		s:           serverHTTP.NewServer(cfg),
-		Location:    Location,
-		Interval:    cfg.Interval,
-		GomtcAddr:   cfg.GomtcAddr,
+		// s:           serverHTTP.NewServer(cfg),
+		// renewOneMac: make(chan string, 100),
+		updater:   updatergomtc.NewUpdater(cfg.GomtcAddr),
+		store:     sqlitestore.NewStore(db),
+		Location:  SetLocation(cfg.Loc),
+		Interval:  cfg.Interval,
+		GomtcAddr: cfg.GomtcAddr,
 	}
 	return t
+}
+
+func SetLocation(loc string) *time.Location {
+	location, err := time.LoadLocation(loc)
+	if err != nil {
+		location = time.UTC
+		println("Error loading Location(", loc, "):", err, " (set default location = UTC)")
+	}
+	return location
 }

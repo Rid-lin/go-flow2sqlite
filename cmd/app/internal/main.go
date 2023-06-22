@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"net"
-	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	// "git.vegner.org/vsvegner/go-flow2sqlite/cmd/app/internal/config"
 	"go-flow2sqlite/cmd/app/internal/config"
-	"go-flow2sqlite/cmd/app/internal/services/postprocessing"
+	"go-flow2sqlite/cmd/app/internal/models"
+	pp "go-flow2sqlite/cmd/app/internal/services/postprocessing"
 	decodeflow "go-flow2sqlite/cmd/app/internal/services/udp"
 	"go-flow2sqlite/pkg/gsshutdown"
 )
@@ -18,37 +18,35 @@ func main() {
 	var err error
 
 	cfg := config.NewConfig()
+	t := NewApp(cfg)
 
+	// TODO  заменть это поделие вот этой https://github.com/qdm12/goshutdown/blob/main/examples/order-goroutines/main.go
 	/*Creating a channel to intercept the program end signal*/
-
 	gss := gsshutdown.NewGSS(
 		Exit(nil),
 		GetSIGHUP(cfg),
 	)
-
-	t := NewApp(cfg)
-
 	go gss.Exit(nil)
 
-	// Endless file parsing loop
+	/* Infinite-loop for reading devices info */
 	go func(cfg *config.Config) {
-		t.s.runOnce(cfg)
+		t.updater.Device().RunOnce(cfg.GomtcAddr, cfg.Interval, 15)
 		for {
-			<-c.timerUpdatedevice.C
-			c.runOnce(cfg)
+			<-t.updater.Device().GetTimer().C
+			t.updater.Device().RunOnce(cfg.GomtcAddr, cfg.Interval, 15)
 		}
 	}(cfg)
 
-	go func(cfg *config.Config, t *Transport) {
-		if err := http.ListenAndServe(cfg.BindAddr, t.router); err != nil {
-			logrus.Fatal(err)
-		}
-	}(cfg, t)
+	// go func(cfg *config.Config, t *Transport) {
+	// 	if err := http.ListenAndServe(cfg.BindAddr, t.router); err != nil {
+	// 		logrus.Fatal(err)
+	// 	}
+	// }(cfg, t)
 
 	/* Create output pipe */
 	outputChannel := make(chan decodeflow.DecodedRecord, 100)
-	storeChannel := make(chan postprocessing.BMes, 100)
-	go postprocessing.PreparingForStore(storeChannel, outputChannel, cfg.SubNets, cfg.IgnorList, t.ds)
+	storeChannel := make(chan models.BMes, 100)
+	go pp.PreparingForStore(storeChannel, outputChannel, cfg.SubNets, cfg.IgnorList, t.ds)
 
 	/* Start listening on the specified port */
 	logrus.Infof("Start listening to NetFlow stream on %v", cfg.FlowAddr)

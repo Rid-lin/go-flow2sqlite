@@ -21,7 +21,7 @@ func (s *Store) Stat() store.StatRepository {
 
 	s.statRepository = &StatRepository{
 		store: s,
-		stats: []*models.StatInDB{},
+		stats: []*models.BMes{},
 	}
 	return s.statRepository
 }

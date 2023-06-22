@@ -1,12 +1,11 @@
 package teststore
 
 import (
+	"database/sql"
 	"io/fs"
 	"os"
 	"path"
 	"sort"
-
-	"github.com/Rid-lin/go-sqlite-lite/sqlite3"
 
 	"strings"
 	"testing"
@@ -20,7 +19,7 @@ func TestDB(t *testing.T, dsn string) (string, func(...string)) {
 	}
 }
 
-func MigrateSQLite(pathToMigrations string, conn *sqlite3.Conn) error {
+func MigrateSQLite(pathToMigrations string, db *sql.DB) error {
 
 	files, err := os.ReadDir(pathToMigrations)
 	if err != nil {
@@ -33,7 +32,7 @@ func MigrateSQLite(pathToMigrations string, conn *sqlite3.Conn) error {
 			if err != nil {
 				return err
 			}
-			err = conn.Exec(string(b))
+			_, err = db.Exec(string(b))
 			if err != nil {
 				return err
 			}
